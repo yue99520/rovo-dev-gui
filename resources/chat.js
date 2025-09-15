@@ -29,7 +29,7 @@ function setupEventListeners() {
     
     // Enter key in input
     messageInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
+        if (e.key === 'Enter' && e.ctrlKey && !e.shiftKey) {
             e.preventDefault();
             sendMessage();
         }
