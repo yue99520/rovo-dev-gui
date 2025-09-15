@@ -12,12 +12,35 @@
   "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "id": "rovoChatView",
+          "name": "Rovo AI Chat",
+          "when": "workbenchState != empty"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "rovo-dev-gui.helloWorld",
         "title": "Hello World"
+      },
+      {
+        "command": "rovo-dev-gui.openChat",
+        "title": "Open Rovo Chat",
+        "icon": "$(comment-discussion)"
       }
-    ]
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "rovo-dev-gui.openChat",
+          "when": "view == rovoChatView",
+          "group": "navigation"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
