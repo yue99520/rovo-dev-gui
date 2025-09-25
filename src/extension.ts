@@ -3,9 +3,11 @@
 import * as vscode from 'vscode';
 import { ChatProvider } from './chatProvider';
 import { getWebviewContent } from './webviewContent';
+import { CLIManager, CLIStatus, CLIManagerEvents, ModelUsage } from './cliManager';
 
 // Global variables
 let chatWebviewPanel: vscode.WebviewPanel | undefined = undefined;
+let cliManager: CLIManager | undefined = undefined;
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -29,6 +31,9 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	context.subscriptions.push(helloWorldDisposable, openChatDisposable);
+
+	// 初始化 CLI Manager
+	initializeCLIManager();
 }
 
 function openChatPanel(context: vscode.ExtensionContext) {
@@ -63,6 +68,12 @@ function openChatPanel(context: vscode.ExtensionContext) {
 				case 'requestStatus':
 					sendStatusUpdate();
 					break;
+				case 'startCLI':
+					startCLI();
+					break;
+				case 'stopCLI':
+					stopCLI();
+					break;
 				default:
 					console.log('Unknown message type:', message.type);
 			}
@@ -88,29 +99,137 @@ function openChatPanel(context: vscode.ExtensionContext) {
 
 function handleChatMessage(text: string, timestamp: number) {
 	console.log('Received chat message:', text);
-	
-	// For now, just echo the message back as a simple test
-	// In Phase 2, this will be sent to the CLI process
-	setTimeout(() => {
+
+	// 發送訊息到 CLI 程序
+	if (cliManager && cliManager.isRunning()) {
+		const success = cliManager.sendMessage(text);
+		if (!success) {
+			// 如果發送失敗，顯示錯誤訊息
+			if (chatWebviewPanel) {
+				chatWebviewPanel.webview.postMessage({
+					type: 'error',
+					content: 'Failed to send message to CLI process',
+					timestamp: Date.now()
+				});
+			}
+		}
+	} else {
+		// CLI 未運行，嘗試啟動
 		if (chatWebviewPanel) {
 			chatWebviewPanel.webview.postMessage({
-				type: 'cliResponse',
-				content: `Echo: ${text}`,
+				type: 'error',
+				content: 'CLI process not running. Please start the CLI first.',
 				timestamp: Date.now()
 			});
 		}
-	}, 1000); // Simulate processing delay
+	}
 }
 
 function sendStatusUpdate() {
 	if (chatWebviewPanel) {
+		const isConnected = cliManager ? cliManager.isRunning() : false;
+		const status = cliManager ? cliManager.getStatus() : CLIStatus.NOT_STARTED;
+
 		chatWebviewPanel.webview.postMessage({
 			type: 'statusUpdate',
-			connected: true, // For now, always connected in Phase 1
-			cliStatus: 'Ready (Mock Mode)'
+			connected: isConnected,
+			cliStatus: status
 		});
 	}
 }
 
+function initializeCLIManager() {
+	const events: CLIManagerEvents = {
+		onOutput: (data: string) => {
+			// 將 CLI 輸出發送到聊天介面
+			if (chatWebviewPanel) {
+				chatWebviewPanel.webview.postMessage({
+					type: 'cliResponse',
+					content: data.trim(),
+					timestamp: Date.now()
+				});
+			}
+		},
+		onError: (error: string) => {
+			// 將 CLI 錯誤發送到聊天介面
+			if (chatWebviewPanel) {
+				chatWebviewPanel.webview.postMessage({
+					type: 'error',
+					content: error.trim(),
+					timestamp: Date.now()
+				});
+			}
+		},
+		onStatusChange: (status: CLIStatus) => {
+			// 更新狀態顯示
+			sendStatusUpdate();
+		},
+		onModelUsageChange: (usage: ModelUsage) => {
+			if (chatWebviewPanel) {
+				chatWebviewPanel.webview.postMessage({
+					type: 'modelUsageChange',
+					usage: usage,
+				});
+			}
+		}
+	};
+
+	cliManager = new CLIManager(events);
+}
+
+async function startCLI() {
+	if (!cliManager) {
+		console.error('CLI Manager not initialized');
+		return;
+	}
+
+	if (cliManager.isRunning()) {
+		console.log('CLI already running');
+		return;
+	}
+
+	const success = await cliManager.start();
+	if (success) {
+		if (chatWebviewPanel) {
+			chatWebviewPanel.webview.postMessage({
+				type: 'cliResponse',
+				content: 'Starting acli rovodev run...',
+				timestamp: Date.now()
+			});
+		}
+	} else {
+		if (chatWebviewPanel) {
+			chatWebviewPanel.webview.postMessage({
+				type: 'error',
+				content: 'Failed to start CLI process. Make sure "acli" is installed and accessible.',
+				timestamp: Date.now()
+			});
+		}
+	}
+}
+
+function stopCLI() {
+	if (!cliManager) {
+		console.error('CLI Manager not initialized');
+		return;
+	}
+
+	cliManager.stop().then((success) => {
+		if (chatWebviewPanel) {
+			if (success) {
+				chatWebviewPanel.webview.postMessage({
+					type: 'cliResponse',
+					content: 'CLI process stopped.',
+					timestamp: Date.now()
+				});
+			}
+		}
+	});
+}
+
 // This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() {
+	if (cliManager) {
+		cliManager.dispose();
+	}
+}

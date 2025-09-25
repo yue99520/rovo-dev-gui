@@ -81,7 +81,7 @@
 建立聊天介面的 WebView panel，包含：
 - 訊息顯示區域
 - 輸入框
-- 發送按鈕（command + enter 發送）
+- 發送按鈕（ctrl + enter 發送）
 - 基本的 CSS 樣式
 
 ### Phase 2: CLI 程序管理 (CLI Process Management)

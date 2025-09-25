@@ -34,11 +34,11 @@ body {
 }
 
 #connection-status {
-    color: var(--vscode-statusBarItem-errorForeground);
+    color: rgb(165, 79, 80);
 }
 
 #connection-status.connected {
-    color: var(--vscode-statusBarItem-prominentForeground);
+    color: rgb(100, 129, 81);
 }
 
 /* Messages Area */
@@ -87,6 +87,8 @@ body {
     border-radius: 18px;
     position: relative;
     word-wrap: break-word;
+    white-space: pre-wrap; /* 保留空白字符和換行 */
+    line-height: 1.4; /* 改善行高 */
 }
 
 .message.user .message-bubble {
@@ -166,13 +168,18 @@ body {
     flex: 1;
     padding: 10px 14px;
     border: 1px solid var(--vscode-input-border);
-    border-radius: 20px;
+    border-radius: 10px;
     background-color: var(--vscode-input-background);
     color: var(--vscode-input-foreground);
     font-family: var(--vscode-font-family);
     font-size: var(--vscode-font-size);
     outline: none;
     resize: none;
+    min-height: 20px;
+    max-height: calc(1.4em * 10 + 20px); /* 10行 + padding */
+    line-height: 1.4;
+    overflow-y: auto;
+    box-sizing: border-box;
 }
 
 #message-input:focus {
@@ -221,4 +228,31 @@ body {
 
 #messages-area::-webkit-scrollbar-thumb:hover {
     background: var(--vscode-scrollbarSlider-hoverBackground);
+}
+
+/* CLI Control Buttons */
+#cli-controls {
+    display: flex;
+    gap: 8px;
+}
+
+#cli-controls button {
+    padding: 4px 12px;
+    border: 1px solid var(--vscode-button-border);
+    border-radius: 4px;
+    background-color: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    cursor: pointer;
+    font-size: 11px;
+    font-family: var(--vscode-font-family);
+    transition: background-color 0.2s ease;
+}
+
+#cli-controls button:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+#cli-controls button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }

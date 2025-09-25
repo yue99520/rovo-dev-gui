@@ -19,6 +19,9 @@ export function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.
         <div id="status-bar">
             <span id="connection-status">● Disconnected</span>
             <span id="cli-status">CLI: Not Started</span>
+            <span id="model-name">Model: claude-sonnet-4@20250514</span>
+            <span id="model-session-usage">Session context: 8.3K/200K</span>
+            <span id="model-token-usage">Token: 4M/20M</span>
         </div>
         <div id="messages-area">
             <div class="welcome-message">
@@ -28,7 +31,7 @@ export function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.
         </div>
         <div id="input-area">
             <div id="input-container">
-                <input type="text" id="message-input" placeholder="Type your message..." disabled>
+                <textarea id="message-input" placeholder="Type your message..." disabled rows="1"></textarea>
                 <button id="send-button" disabled>
                     <span>Send</span>
                 </button>

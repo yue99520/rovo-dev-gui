@@ -7,6 +7,9 @@ const messageInput = document.getElementById('message-input');
 const sendButton = document.getElementById('send-button');
 const connectionStatus = document.getElementById('connection-status');
 const cliStatus = document.getElementById('cli-status');
+const modelSessionUsage = document.getElementById('model-session-usage');
+const modelTokenUsage = document.getElementById('model-token-usage');
+const modelName = document.getElementById('model-name');
 
 // State
 let isConnected = false;
@@ -27,13 +30,18 @@ function setupEventListeners() {
     // Send button click
     sendButton.addEventListener('click', sendMessage);
     
-    // Enter key in input
     messageInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter' && e.ctrlKey && !e.shiftKey) {
             e.preventDefault();
             sendMessage();
         }
     });
+
+    // Auto-resize textarea based on content
+    messageInput.addEventListener('input', autoResizeTextarea);
+
+    // Add CLI control buttons
+    addCLIControlButtons();
     
     // Listen for messages from extension
     window.addEventListener('message', (event) => {
@@ -93,6 +101,10 @@ function handleMessageFromExtension(message) {
             updateConnectionStatus(false);
             setLoading(false);
             break;
+
+        case 'modelUsageChange':
+            updateModelUsage(message.usage);
+            break;
             
         default:
             console.log('Unknown message type:', message.type);
@@ -105,7 +117,10 @@ function addMessage(sender, content) {
     
     const bubbleDiv = document.createElement('div');
     bubbleDiv.className = 'message-bubble';
-    bubbleDiv.textContent = content;
+    
+    // 處理換行符 - 將 \n 轉換為 <br> 標籤
+    const formattedContent = content.replace(/\n/g, '<br>');
+    bubbleDiv.innerHTML = formattedContent;
     
     const timeDiv = document.createElement('div');
     timeDiv.className = 'message-time';
@@ -129,7 +144,10 @@ function addErrorMessage(content) {
     bubbleDiv.className = 'message-bubble';
     bubbleDiv.style.backgroundColor = 'var(--vscode-errorForeground)';
     bubbleDiv.style.color = 'var(--vscode-editor-background)';
-    bubbleDiv.textContent = `Error: ${content}`;
+    
+    // 處理錯誤訊息中的換行符
+    const formattedContent = (`Error: ${content}`).replace(/\n/g, '<br>');
+    bubbleDiv.innerHTML = formattedContent;
     
     const timeDiv = document.createElement('div');
     timeDiv.className = 'message-time';
@@ -200,6 +218,16 @@ function updateConnectionStatus(connected) {
     }
 }
 
+function updateModelUsage(usage) {
+    if (usage.session_context_string) {
+        modelSessionUsage.textContent = `Session: ${usage.session_context_string}`;
+    } else if (usage.token_usage_string) {
+        modelTokenUsage.textContent = `Tokens: ${usage.token_usage_string}`;
+    } else if (usage.current_model) {
+        modelName.textContent = `Model: ${usage.current_model}`;
+    }
+}
+
 function updateCliStatus(status) {
     cliStatus.textContent = `CLI: ${status}`;
 }
@@ -213,6 +241,53 @@ function removeWelcomeMessage() {
 
 function scrollToBottom() {
     messagesArea.scrollTop = messagesArea.scrollHeight;
+}
+
+function autoResizeTextarea() {
+    // Reset height to get the correct scrollHeight
+    messageInput.style.height = 'auto';
+    
+    // Calculate the new height
+    const maxHeight = parseFloat(getComputedStyle(messageInput).maxHeight);
+    const newHeight = Math.min(messageInput.scrollHeight, maxHeight);
+    
+    // Set the new height
+    messageInput.style.height = newHeight + 'px';
+}
+
+function addCLIControlButtons() {
+    // 在狀態欄添加 CLI 控制按鈕
+    const statusBar = document.getElementById('status-bar');
+    if (statusBar) {
+        const controlsDiv = document.createElement('div');
+        controlsDiv.id = 'cli-controls';
+        controlsDiv.style.display = 'flex';
+        controlsDiv.style.gap = '8px';
+
+        const startButton = document.createElement('button');
+        startButton.id = 'start-cli-button';
+        startButton.textContent = 'Start CLI';
+        startButton.onclick = () => {
+            vscode.postMessage({
+                type: 'startCLI',
+                timestamp: Date.now()
+            });
+        };
+
+        const stopButton = document.createElement('button');
+        stopButton.id = 'stop-cli-button';
+        stopButton.textContent = 'Stop CLI';
+        stopButton.onclick = () => {
+            vscode.postMessage({
+                type: 'stopCLI',
+                timestamp: Date.now()
+            });
+        };
+
+        controlsDiv.appendChild(startButton);
+        controlsDiv.appendChild(stopButton);
+        statusBar.appendChild(controlsDiv);
+    }
 }
 
 // Initialize when DOM is loaded
